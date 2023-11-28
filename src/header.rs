@@ -30,7 +30,7 @@ pub struct Question {
 
 #[repr(u16)]
 pub enum Type {
-    A,
+    A = 1,
     NS,
     MD,
     MF,
@@ -50,7 +50,7 @@ pub enum Type {
 
 #[repr(u16)]
 pub enum Class {
-    IN,
+    IN = 1,
     CS,
     CH,
     HS,
