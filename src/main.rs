@@ -1,4 +1,5 @@
 use dns_starter_rust::*;
+use nom::AsBytes;
 use std::net::UdpSocket;
 
 fn main() {
@@ -20,13 +21,21 @@ fn main() {
                     recursion_available: false,
                     reserved: 0,
                     response_code: 0,
-                    question_count: 0,
+                    qd_count: 1,
                     an_count: 0,
                     nscount: 0,
                     arcount: 0,
                 };
+
+                let question = Question {
+                    name: String::from("codecrafters.io"),
+                    q_type: Type::A,
+                    class: Class::IN,
+                };
+                let mut response = response.to_bytes();
+                response.extend_from_slice(question.serialise().as_bytes());
                 udp_socket
-                    .send_to(&response.to_bytes(), source)
+                    .send_to(&response, source)
                     .expect("Failed to send response");
             }
             Err(e) => {
