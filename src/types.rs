@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use bytes::{BufMut, BytesMut};
 
 pub struct Header {
@@ -56,6 +58,15 @@ pub enum Class {
     HS,
 }
 
+pub struct Answer {
+    pub name: String,
+    pub a_type: Type,
+    pub class: Class,
+    pub ttl: u32,
+    pub rdlength: u16,
+    pub data: u32, // TODO: data type depends on a_type
+}
+
 impl Header {
     pub fn to_bytes(self) -> BytesMut {
         let mut s = BytesMut::with_capacity(12);
@@ -86,8 +97,29 @@ impl Question {
             s.put_slice(name.as_bytes());
         }
         s.put_u8(0);
+
         s.put_u16(self.q_type as u16);
         s.put_u16(self.class as u16);
+
+        s
+    }
+}
+
+impl Answer {
+    pub fn serialise(self) -> BytesMut {
+        let mut s = BytesMut::with_capacity(size_of::<Answer>());
+
+        for name in self.name.split('.') {
+            s.put_u8(name.len() as u8);
+            s.put_slice(name.as_bytes());
+        }
+        s.put_u8(0);
+
+        s.put_u16(self.a_type as u16);
+        s.put_u16(self.class as u16);
+        s.put_u32(self.ttl);
+        s.put_u16(self.rdlength);
+        s.put_u32(self.data);
 
         s
     }

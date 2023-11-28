@@ -22,18 +22,29 @@ fn main() {
                     reserved: 0,
                     response_code: 0,
                     qd_count: 1,
-                    an_count: 0,
+                    an_count: 1,
                     nscount: 0,
                     arcount: 0,
                 };
-
+                let domain = String::from("codecrafters.io");
                 let question = Question {
-                    name: String::from("codecrafters.io"),
+                    name: domain.clone(),
                     q_type: Type::A,
                     class: Class::IN,
                 };
+
+                let answer = Answer {
+                    name: domain,
+                    a_type: Type::A,
+                    class: Class::IN,
+                    ttl: 60,
+                    rdlength: 4,
+                    data: 23983289,
+                };
+
                 let mut response = response.to_bytes();
                 response.extend_from_slice(question.serialise().as_bytes());
+                response.extend_from_slice(answer.serialise().as_bytes());
                 udp_socket
                     .send_to(&response, source)
                     .expect("Failed to send response");
