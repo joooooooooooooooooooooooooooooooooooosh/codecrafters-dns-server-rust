@@ -46,6 +46,7 @@ impl TryFrom<u8> for ResponseCode {
     }
 }
 
+#[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum QueryResponse {
     Query = 0,
@@ -72,6 +73,7 @@ pub struct Question {
     len: usize,
 }
 
+#[derive(Clone, Copy)]
 #[repr(u16)]
 pub enum Type {
     A = 1,
@@ -118,6 +120,7 @@ impl TryFrom<u16> for Type {
     }
 }
 
+#[derive(Clone, Copy)]
 #[repr(u16)]
 pub enum Class {
     IN = 1,
@@ -150,7 +153,7 @@ pub struct Answer {
 }
 
 impl Header {
-    pub fn to_bytes(self) -> BytesMut {
+    pub fn to_bytes(&self) -> BytesMut {
         let mut s = BytesMut::with_capacity(12);
         s.put_u16(self.packet_id);
         s.put_u8(
@@ -210,7 +213,7 @@ impl Header {
 }
 
 impl Question {
-    pub fn to_bytes(self) -> BytesMut {
+    pub fn to_bytes(&self) -> BytesMut {
         let mut s = BytesMut::with_capacity(self.name.len() + 4);
 
         for name in self.name.split('.') {
@@ -268,7 +271,7 @@ impl Question {
 }
 
 impl Answer {
-    pub fn to_bytes(self) -> BytesMut {
+    pub fn to_bytes(&self) -> BytesMut {
         let mut s = BytesMut::with_capacity(size_of::<Answer>());
 
         for name in self.name.split('.') {
