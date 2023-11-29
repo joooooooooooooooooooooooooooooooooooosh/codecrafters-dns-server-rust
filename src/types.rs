@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use bytes::{BufMut, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 pub struct Header {
     pub packet_id: u16,
@@ -11,17 +11,55 @@ pub struct Header {
     pub recursion_desired: bool,
     pub recursion_available: bool,
     pub reserved: u8,
-    pub response_code: u8,
+    pub response_code: ResponseCode,
     pub qd_count: u16,
     pub an_count: u16,
-    pub nscount: u16,
-    pub arcount: u16,
+    pub ns_count: u16,
+    pub ar_count: u16,
+}
+
+#[repr(u8)]
+pub enum ResponseCode {
+    NoError = 0,
+    FormatError,
+    ServerFailure,
+    NameError,
+    NotImplemented,
+    Refused,
+}
+
+impl TryFrom<u8> for ResponseCode {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::NoError),
+            1 => Ok(Self::FormatError),
+            2 => Ok(Self::ServerFailure),
+            3 => Ok(Self::NameError),
+            4 => Ok(Self::NotImplemented),
+            5 => Ok(Self::Refused),
+            _ => Err(()),
+        }
+    }
 }
 
 #[repr(u8)]
 pub enum QueryResponse {
-    Query,
+    Query = 0,
     Response,
+}
+
+impl TryFrom<u8> for QueryResponse {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Query),
+            1 => Ok(Self::Response),
+            _ => Err(()),
+        }
+    }
 }
 
 pub struct Question {
@@ -78,18 +116,57 @@ impl Header {
                 | (self.truncation as u8) << 1
                 | self.recursion_desired as u8,
         );
-        s.put_u8((self.recursion_available as u8) << 7 | self.reserved << 4 | self.response_code);
+        s.put_u8(
+            (self.recursion_available as u8) << 7 | self.reserved << 4 | self.response_code as u8,
+        );
         s.put_u16(self.qd_count);
         s.put_u16(self.an_count);
-        s.put_u16(self.nscount);
-        s.put_u16(self.arcount);
+        s.put_u16(self.ns_count);
+        s.put_u16(self.ar_count);
 
         s
+    }
+
+    pub fn from_bytes(src: &mut Bytes) -> Option<Self> {
+        let packet_id = src.get_u16();
+
+        let next = src.get_u8();
+        let qr_indicator = (next >> 7 & 0b1).try_into().ok()?;
+        let opcode = (next >> 3) & 0b1111;
+        let authoritative_answer = ((next >> 2) & 0b1) != 0;
+        let truncation = ((next >> 1) & 0b1) != 0;
+        let recursion_desired = (next & 0b1) != 0;
+
+        let next = src.get_u8();
+        let recursion_available = (next >> 7 & 0b1) != 0;
+        let reserved = (next >> 4) & 0b111;
+        let response_code = (next & 0b1111).try_into().ok()?;
+
+        let qd_count = src.get_u16();
+        let an_count = src.get_u16();
+        let ns_count = src.get_u16();
+        let ar_count = src.get_u16();
+
+        Some(Self {
+            packet_id,
+            qr_indicator,
+            opcode,
+            authoritative_answer,
+            truncation,
+            recursion_desired,
+            recursion_available,
+            reserved,
+            response_code,
+            qd_count,
+            an_count,
+            ns_count,
+            ar_count,
+        })
     }
 }
 
 impl Question {
-    pub fn serialise(self) -> BytesMut {
+    pub fn to_bytes(self) -> BytesMut {
         let mut s = BytesMut::with_capacity(self.name.len() + 4);
 
         for name in self.name.split('.') {
@@ -106,7 +183,7 @@ impl Question {
 }
 
 impl Answer {
-    pub fn serialise(self) -> BytesMut {
+    pub fn to_bytes(self) -> BytesMut {
         let mut s = BytesMut::with_capacity(size_of::<Answer>());
 
         for name in self.name.split('.') {
