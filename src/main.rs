@@ -12,10 +12,11 @@ fn main() -> Result<()> {
             Ok((size, source)) => {
                 let received_data = Bytes::copy_from_slice(&buf[0..size]);
 
-                let recvd_header =
-                    Header::from_bytes(received_data).context("error parsing recieved header")?;
+                let recvd_header = Header::from_bytes(received_data.slice(..12))
+                    .context("error parsing recieved header")?;
 
-                println!("recieved {size} bytes");
+                let recvd_question = Question::from_bytes(received_data.slice(12..))
+                    .context("error parsing recieved question")?;
 
                 let header = Header {
                     packet_id: recvd_header.packet_id,
@@ -37,15 +38,14 @@ fn main() -> Result<()> {
                     ar_count: 0,
                 };
 
-                let domain = String::from("codecrafters.io");
                 let question = Question {
-                    name: domain.clone(),
+                    name: recvd_question.name.clone(),
                     q_type: Type::A,
                     class: Class::IN,
                 };
 
                 let answer = Answer {
-                    name: domain,
+                    name: recvd_question.name,
                     a_type: Type::A,
                     class: Class::IN,
                     ttl: 60,
