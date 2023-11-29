@@ -10,16 +10,18 @@ fn main() -> Result<()> {
     loop {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
+                println!("recieved {size} bytes");
+
                 let mut received_data = Bytes::copy_from_slice(&buf[0..size]);
 
                 let recvd_header = Header::from_bytes(received_data.slice(..HEADER_LENGTH))
-                    .context("error parsing recieved header")?;
+                    .context("error parsing received header")?;
 
                 let mut questions = Vec::with_capacity(recvd_header.qd_count as usize);
-                for _ in 0..recvd_header.qd_count {
+                for q_num in 0..recvd_header.qd_count {
                     questions.push(
                         Question::from_bytes(&mut received_data, &questions)
-                            .context("error parsing recieved question")?,
+                            .context(format!("error parsing received question #{q_num}"))?,
                     );
                 }
 
@@ -38,7 +40,7 @@ fn main() -> Result<()> {
                         ResponseCode::NotImplemented
                     },
                     qd_count: recvd_header.qd_count,
-                    an_count: recvd_header.an_count,
+                    an_count: recvd_header.qd_count,
                     ns_count: 0,
                     ar_count: 0,
                 }

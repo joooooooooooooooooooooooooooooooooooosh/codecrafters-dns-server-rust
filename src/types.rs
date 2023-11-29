@@ -232,6 +232,8 @@ impl Question {
         let mut name = String::with_capacity(len as usize);
         while len != 0 {
             if len & 0b1100_0000 != 0 {
+                println!("pointer time");
+                // println!("{len} {}", len & 0b1100_0000);
                 let pointer = ((len as u16) << 8) | src.get_u8() as u16;
                 let pointer = (pointer & (0b0011_1111_1111_1111)) as usize;
                 let question = questions.iter().rev().find(|q| q.offset < pointer)?;
@@ -251,8 +253,10 @@ impl Question {
             }
         }
 
+        println!("blah");
         let q_type = src.get_u16().try_into().ok()?;
         let class = src.get_u16().try_into().ok()?;
+        println!("blah");
 
         Some(Self {
             name,
