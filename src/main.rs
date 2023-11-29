@@ -48,6 +48,7 @@ fn main() -> Result<()> {
                 .to_bytes();
                 println!("header len {}", response.len());
 
+                response.extend_from_slice(&buf[HEADER_LENGTH..size]);
                 for question in questions {
                     let answer = Answer {
                         name: question.name.clone(),
@@ -58,7 +59,6 @@ fn main() -> Result<()> {
                         data: 23983289,
                     };
 
-                    response.extend_from_slice(&question.to_bytes());
                     response.extend_from_slice(&answer.to_bytes());
                 }
 
