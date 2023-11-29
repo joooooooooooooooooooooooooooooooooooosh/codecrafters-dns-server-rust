@@ -20,6 +20,7 @@ pub struct Header {
     pub ar_count: u16,
 }
 
+#[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum ResponseCode {
     NoError = 0,
@@ -176,6 +177,7 @@ impl Header {
 
     pub fn from_bytes(src: &mut Bytes) -> Option<Self> {
         let packet_id = src.get_u16();
+        println!("blah");
 
         let next = src.get_u8();
         let qr_indicator = (next >> 7 & 0b1).try_into().ok()?;
@@ -183,16 +185,21 @@ impl Header {
         let authoritative_answer = ((next >> 2) & 0b1) != 0;
         let truncation = ((next >> 1) & 0b1) != 0;
         let recursion_desired = (next & 0b1) != 0;
+        println!("blah");
 
         let next = src.get_u8();
         let recursion_available = (next >> 7 & 0b1) != 0;
         let reserved = (next >> 4) & 0b111;
         let response_code = (next & 0b1111).try_into().ok()?;
 
+        println!("blah");
         let qd_count = src.get_u16();
         let an_count = src.get_u16();
         let ns_count = src.get_u16();
         let ar_count = src.get_u16();
+        println!("blah");
+        println!("blah");
+        println!("blah");
 
         Some(Self {
             packet_id,

@@ -16,6 +16,7 @@ fn main() -> Result<()> {
 
                 let recvd_header = Header::from_bytes(&mut received_data)
                     .context("error parsing received header")?;
+                println!("parsed header");
                 let forward_header = Header {
                     qd_count: 1,
                     ..recvd_header
@@ -60,19 +61,6 @@ fn main() -> Result<()> {
                 for answer in answers {
                     response.extend_from_slice(&answer)
                 }
-
-                // for question in questions {
-                //     let answer = Answer {
-                //         name: question.name.clone(),
-                //         a_type: Type::A,
-                //         class: Class::IN,
-                //         ttl: 60,
-                //         rdlength: 4,
-                //         data: 23983289,
-                //     };
-
-                //     response.extend_from_slice(&answer.to_bytes());
-                // }
 
                 udp_socket
                     .send_to(&response, source)
