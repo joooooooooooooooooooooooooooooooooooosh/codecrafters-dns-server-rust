@@ -62,9 +62,6 @@ fn main() -> Result<()> {
                     response.extend_from_slice(&answer.to_bytes());
                 }
 
-                println!("total len {}", response.len());
-                println!("response: {response:x}");
-
                 udp_socket
                     .send_to(&response, source)
                     .expect("Failed to send response");
