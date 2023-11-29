@@ -14,14 +14,15 @@ fn main() -> Result<()> {
 
                 let mut received_data = Bytes::copy_from_slice(&buf[0..size]);
 
-                let recvd_header = Header::from_bytes(received_data.slice(..HEADER_LENGTH))
+                let recvd_header = Header::from_bytes(&mut received_data)
                     .context("error parsing received header")?;
 
+                println!("got {} questions", recvd_header.qd_count);
                 let mut questions = Vec::with_capacity(recvd_header.qd_count as usize);
                 for q_num in 0..recvd_header.qd_count {
                     questions.push(
                         Question::from_bytes(&mut received_data, &questions)
-                            .context(format!("error parsing received question {q_num}"))?,
+                            .context(format!("error parsing received question #{q_num}"))?,
                     );
                 }
 
@@ -45,6 +46,7 @@ fn main() -> Result<()> {
                     ar_count: 0,
                 }
                 .to_bytes();
+                println!("header len {}", response.len());
 
                 for question in questions {
                     let answer = Answer {
@@ -59,6 +61,9 @@ fn main() -> Result<()> {
                     response.extend_from_slice(&question.to_bytes());
                     response.extend_from_slice(&answer.to_bytes());
                 }
+
+                println!("total len {}", response.len());
+                println!("response: {response:x}");
 
                 udp_socket
                     .send_to(&response, source)
