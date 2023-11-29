@@ -88,12 +88,52 @@ pub enum Type {
     TXT,
 }
 
+impl TryFrom<u16> for Type {
+    type Error = ();
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Type::A),
+            2 => Ok(Type::NS),
+            3 => Ok(Type::MD),
+            4 => Ok(Type::MF),
+            5 => Ok(Type::CNAME),
+            6 => Ok(Type::SOA),
+            7 => Ok(Type::MB),
+            8 => Ok(Type::MG),
+            9 => Ok(Type::MR),
+            10 => Ok(Type::NULL),
+            11 => Ok(Type::WKS),
+            12 => Ok(Type::PTR),
+            13 => Ok(Type::HINFO),
+            14 => Ok(Type::MINFO),
+            15 => Ok(Type::MX),
+            16 => Ok(Type::TXT),
+            _ => Err(()),
+        }
+    }
+}
+
 #[repr(u16)]
 pub enum Class {
     IN = 1,
     CS,
     CH,
     HS,
+}
+
+impl TryFrom<u16> for Class {
+    type Error = ();
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Class::IN),
+            2 => Ok(Class::CS),
+            3 => Ok(Class::CH),
+            4 => Ok(Class::HS),
+            _ => Err(()),
+        }
+    }
 }
 
 pub struct Answer {
@@ -127,7 +167,7 @@ impl Header {
         s
     }
 
-    pub fn from_bytes(src: &mut Bytes) -> Option<Self> {
+    pub fn from_bytes(mut src: Bytes) -> Option<Self> {
         let packet_id = src.get_u16();
 
         let next = src.get_u8();
@@ -179,6 +219,30 @@ impl Question {
         s.put_u16(self.class as u16);
 
         s
+    }
+
+    pub fn from_bytes(mut src: Bytes) -> Option<Self> {
+        let mut len = src.get_u8();
+        let mut name = String::with_capacity(len as usize);
+        while len != 0 {
+            for _ in 0..len {
+                name.push(src.get_u8() as char)
+            }
+
+            len = src.get_u8();
+            if len != 0 {
+                name.push('.')
+            }
+        }
+
+        let q_type = src.get_u16().try_into().ok()?;
+        let class = src.get_u16().try_into().ok()?;
+
+        Some(Self {
+            name,
+            q_type,
+            class,
+        })
     }
 }
 

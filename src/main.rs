@@ -10,23 +10,23 @@ fn main() -> Result<()> {
     loop {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
-                let mut received_data = Bytes::copy_from_slice(&buf[0..size]);
-                // println!("Received {} bytes from {}", size, source);
-                // println!("{received_data:?}");
+                let received_data = Bytes::copy_from_slice(&buf[0..size]);
 
-                let header = Header::from_bytes(&mut received_data)
-                    .context("error parsing recieved header")?;
+                let recvd_header =
+                    Header::from_bytes(received_data).context("error parsing recieved header")?;
 
-                let response = Header {
-                    packet_id: header.packet_id,
+                println!("recieved {size} bytes");
+
+                let header = Header {
+                    packet_id: recvd_header.packet_id,
                     qr_indicator: QueryResponse::Response,
-                    opcode: header.opcode,
+                    opcode: recvd_header.opcode,
                     authoritative_answer: false,
                     truncation: false,
-                    recursion_desired: header.recursion_desired,
+                    recursion_desired: recvd_header.recursion_desired,
                     recursion_available: false,
                     reserved: 0,
-                    response_code: if header.opcode == 0 {
+                    response_code: if recvd_header.opcode == 0 {
                         ResponseCode::NoError
                     } else {
                         ResponseCode::NotImplemented
@@ -53,7 +53,7 @@ fn main() -> Result<()> {
                     data: 23983289,
                 };
 
-                let mut response = response.to_bytes();
+                let mut response = header.to_bytes();
                 response.extend_from_slice(&question.to_bytes());
                 response.extend_from_slice(&answer.to_bytes());
                 udp_socket
