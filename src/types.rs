@@ -2,6 +2,8 @@ use std::mem::size_of;
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
+pub static HEADER_LENGTH: usize = 12;
+
 pub struct Header {
     pub packet_id: u16,
     pub qr_indicator: QueryResponse,
@@ -66,6 +68,8 @@ pub struct Question {
     pub name: String,
     pub q_type: Type,
     pub class: Class,
+    offset: usize,
+    len: usize,
 }
 
 #[repr(u16)]
@@ -221,10 +225,22 @@ impl Question {
         s
     }
 
-    pub fn from_bytes(mut src: Bytes) -> Option<Self> {
+    pub fn from_bytes(src: &mut Bytes, questions: &Vec<Question>) -> Option<Self> {
+        let start_len = src.len();
+
         let mut len = src.get_u8();
         let mut name = String::with_capacity(len as usize);
         while len != 0 {
+            if len & 0b1100_0000 != 0 {
+                let pointer = ((len as u16) << 8) | src.get_u8() as u16;
+                let pointer = (pointer & (0b0011_1111_1111_1111)) as usize;
+                let question = questions.iter().rev().find(|q| q.offset < pointer)?;
+                let domain_offset = pointer - question.offset;
+                name.push_str(&question.name[domain_offset..]);
+
+                break;
+            }
+
             for _ in 0..len {
                 name.push(src.get_u8() as char)
             }
@@ -242,6 +258,11 @@ impl Question {
             name,
             q_type,
             class,
+            offset: questions
+                .last()
+                .and_then(|q| Some(q.offset + q.len))
+                .unwrap_or(HEADER_LENGTH),
+            len: start_len - src.len(),
         })
     }
 }

@@ -10,15 +10,20 @@ fn main() -> Result<()> {
     loop {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
-                let received_data = Bytes::copy_from_slice(&buf[0..size]);
+                let mut received_data = Bytes::copy_from_slice(&buf[0..size]);
 
-                let recvd_header = Header::from_bytes(received_data.slice(..12))
+                let recvd_header = Header::from_bytes(received_data.slice(..HEADER_LENGTH))
                     .context("error parsing recieved header")?;
 
-                let recvd_question = Question::from_bytes(received_data.slice(12..))
-                    .context("error parsing recieved question")?;
+                let mut questions = Vec::with_capacity(recvd_header.qd_count as usize);
+                for _ in 0..recvd_header.qd_count {
+                    questions.push(
+                        Question::from_bytes(&mut received_data, &questions)
+                            .context("error parsing recieved question")?,
+                    );
+                }
 
-                let header = Header {
+                let mut response = Header {
                     packet_id: recvd_header.packet_id,
                     qr_indicator: QueryResponse::Response,
                     opcode: recvd_header.opcode,
@@ -32,30 +37,27 @@ fn main() -> Result<()> {
                     } else {
                         ResponseCode::NotImplemented
                     },
-                    qd_count: 1,
-                    an_count: 1,
+                    qd_count: recvd_header.qd_count,
+                    an_count: recvd_header.an_count,
                     ns_count: 0,
                     ar_count: 0,
-                };
+                }
+                .to_bytes();
 
-                let question = Question {
-                    name: recvd_question.name.clone(),
-                    q_type: Type::A,
-                    class: Class::IN,
-                };
+                for question in questions {
+                    let answer = Answer {
+                        name: question.name.clone(),
+                        a_type: Type::A,
+                        class: Class::IN,
+                        ttl: 60,
+                        rdlength: 4,
+                        data: 23983289,
+                    };
 
-                let answer = Answer {
-                    name: recvd_question.name,
-                    a_type: Type::A,
-                    class: Class::IN,
-                    ttl: 60,
-                    rdlength: 4,
-                    data: 23983289,
-                };
+                    response.extend_from_slice(&question.to_bytes());
+                    response.extend_from_slice(&answer.to_bytes());
+                }
 
-                let mut response = header.to_bytes();
-                response.extend_from_slice(&question.to_bytes());
-                response.extend_from_slice(&answer.to_bytes());
                 udp_socket
                     .send_to(&response, source)
                     .expect("Failed to send response");
