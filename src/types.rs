@@ -227,25 +227,16 @@ impl Question {
 
     pub fn from_bytes(src: &mut Bytes, questions: &Vec<Question>) -> Option<Self> {
         let start_len = src.len();
-        println!("start len {start_len}");
 
         let mut len = src.get_u8();
         let mut name = String::with_capacity(len as usize);
         while len != 0 {
-            println!("len {len}");
             if len & 0b1100_0000 != 0 {
-                println!("pointer time");
-                println!("{len} {}", len & 0b1100_0000);
-
-                println!("name so far {name}");
-
                 let len = len & (0b0011_1111);
                 let pointer = (((len as u16) << 8) | src.get_u8() as u16).into();
                 let question = questions.iter().rev().find(|q| q.offset < pointer)?;
                 let domain_offset = pointer - question.offset;
                 name.push_str(&question.name[domain_offset..]);
-
-                println!("final name {name}");
 
                 break;
             }
